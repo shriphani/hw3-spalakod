@@ -179,7 +179,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 	    result += Math.pow(entry.getValue(), 2);
 	  }
 	  
-	  return result;
+	  return Math.sqrt(result);
 	}
 
 }
