@@ -143,7 +143,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		  rrScore += (1.0 / relRank);
 		}
 		
-		System.out.println(" (MRR) Mean Reciprocal Rank ::" + rrScore / qids.size());
+		System.out.println("MRR=" + rrScore / qids.size());
 	}
 	
 	public String formatOutput(DecimalFormat df, double cosine, int rank, int qid, int rel, String text) {
