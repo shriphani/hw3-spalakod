@@ -116,6 +116,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		Collections.sort(qids);
 		
 		DecimalFormat df = new DecimalFormat();
+		df.setMinimumFractionDigits(4);
 		df.setMaximumFractionDigits(4);
 		
 		double rrScore = 0.0;
