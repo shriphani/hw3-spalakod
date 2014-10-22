@@ -35,8 +35,12 @@ public class RetrievalEvaluatorImproved extends CasConsumer_ImplBase {
   /** Queries **/
   public Map<Integer, QueryData> queries;
   
+  public int N;
+  public Map<String, Integer> DF;
+  
   public void initialize() throws ResourceInitializationException {
     queries = new HashMap<Integer, QueryData>();
+
   }
 
   /**
@@ -92,7 +96,7 @@ public class RetrievalEvaluatorImproved extends CasConsumer_ImplBase {
     
     for (DocData doc : docs) {
        Map<String, Integer> docTFVector = doc.getDocVector();
-       similarities.put(doc, computeJaccardSimilarity(docVector, docTFVector));
+       similarities.put(doc, computeCosineSimilarity(docVector, docTFVector, DF, N));
     }
     
     List<Entry<DocData, Double>> sortedEntries = new ArrayList<Entry<DocData,Double>>(similarities.entrySet());
@@ -117,20 +121,32 @@ public class RetrievalEvaluatorImproved extends CasConsumer_ImplBase {
    * @param docs
    * @return
    */
-  public Map<String, Integer> computeDF(List<DocData> docs) {
+  public Map<String, Integer> computeDF(Map<Integer, QueryData> queries) {
     
     Map<String, Integer> res = new HashMap<String, Integer>();
     
-    for (DocData doc : docs) {
-      for (Entry<String, Integer> tf : doc.getDocVector().entrySet()) {
-        String token = tf.getKey();
-        if (!res.containsKey(token)) {
-          res.put(token, 0);
+    for (Entry<Integer, QueryData> entry : queries.entrySet()) {
+      for (DocData doc : entry.getValue().getDocs()) {
+        for (Entry<String, Integer> tf : doc.getDocVector().entrySet()) {
+          String token = tf.getKey();
+          if (!res.containsKey(token)) {
+            res.put(token, 0);
+          }
+          res.put(token, res.get(token) + 1);
         }
-        res.put(token, res.get(token) + 1);
       }
     }
     
+    return res;
+  }
+  
+  public int computeN(Map<Integer, QueryData> queries) {
+    int res = 0;
+    for (Entry<Integer, QueryData> entry : queries.entrySet()) {
+      for (DocData doc : entry.getValue().getDocs()) {
+        res++;
+      }
+    }
     return res;
   }
   
@@ -143,6 +159,11 @@ public class RetrievalEvaluatorImproved extends CasConsumer_ImplBase {
       throws ResourceProcessException, IOException {
 
     super.collectionProcessComplete(arg0);
+    
+    DF = computeDF(queries);
+    N= computeN(queries);
+    
+    //System.out.println("ASDF:" + DF.size());
     
     DecimalFormat df = new DecimalFormat();
     df.setMinimumFractionDigits(4);
@@ -225,12 +246,19 @@ public class RetrievalEvaluatorImproved extends CasConsumer_ImplBase {
    * @return cosine_similarity
    */
   private double computeCosineSimilarity(Map<String, Integer> queryVector,
-      Map<String, Integer> docVector) {
+      Map<String, Integer> docVector, Map<String, Integer> df, int N) {
     
     double dotProduct = 0.0;
     
     for (Map.Entry<String, Integer> tf : queryVector.entrySet()) {
-      dotProduct += docVector.containsKey(tf.getKey()) ? tf.getValue() * docVector.get(tf.getKey()) : 0.0;
+      double dfTerm = 1;
+      try{
+        
+        dfTerm = Math.pow((1 + Math.log(N/(df.get(tf.getKey()) + 1))), 2);
+      } catch (Exception e) {
+        // do nothing
+      }
+      dotProduct += docVector.containsKey(tf.getKey()) ? tf.getValue() * dfTerm * docVector.get(tf.getKey()) : 0.0;
     }
 
     return dotProduct / vectorLength(queryVector) / vectorLength(docVector);
