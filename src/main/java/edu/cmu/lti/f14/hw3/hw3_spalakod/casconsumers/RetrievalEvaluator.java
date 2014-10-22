@@ -4,10 +4,16 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
+
+import javax.print.Doc;
+import javax.swing.plaf.basic.BasicToolBarUI.DockingListener;
 
 import org.apache.uima.cas.CAS;
 import org.apache.uima.cas.CASException;
@@ -25,28 +31,12 @@ import edu.cmu.lti.f14.hw3.hw3_spalakod.utils.Utils;
 
 
 public class RetrievalEvaluator extends CasConsumer_ImplBase {
-
-	/** query id number **/
-	public ArrayList<Integer> qIdList;
-
-	/** query and text relevant values **/
-	public ArrayList<Integer> relList;
-
-	/** global tokens set **/
-	public Set<String> tokens;
 	
-	/** for each query, store the query text vectors and so on for quick cosine sim computations **/
-	public HashMap<Integer, QueryData> queryData;
-		
+	/** Queries **/
+	public Map<Integer, QueryData> queries;
+	
 	public void initialize() throws ResourceInitializationException {
-
-		qIdList = new ArrayList<Integer>();
-
-		relList = new ArrayList<Integer>();
-		
-		tokens = new HashSet<String>();
-		
-		queryData = new HashMap<Integer, QueryData>();
+		queries = new HashMap<Integer, QueryData>();
 	}
 
 	/**
@@ -67,33 +57,59 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 	
 		if (it.hasNext()) {
 			Document doc = (Document) it.next();
-
-			// start populating the queydata objects
-			if (!queryData.containsKey(doc.getQueryID())) {
-			  queryData.put(doc.getQueryID(), new QueryData());
-			}
 			
-			HashMap<String, Integer> docTFVector = new HashMap<String, Integer>();
+			Map<String, Integer> docTFVector = new HashMap<String, Integer>();
+      FSList fsTokenList = doc.getTokenList();
+      ArrayList<Token>tokenList=Utils.fromFSListToCollection(fsTokenList, Token.class);
+      
+      for (Token token : tokenList) {
+        docTFVector.put(token.getText(), token.getFrequency());
+      }
 			
-			//Make sure that your previous annotators have populated this in CAS
-			FSList fsTokenList = doc.getTokenList();
-			ArrayList<Token>tokenList=Utils.fromFSListToCollection(fsTokenList, Token.class);
-			
-			for (Token token : tokenList) {
-			  docTFVector.put(token.getText(), token.getFrequency());
-			}
-			
-			if (doc.getRelevanceValue() == 0) {
-			  queryData.get(doc.getQueryID()).setIRRelDocVector(docTFVector);
-			  queryData.get(doc.getQueryID()).setIrRelDocText(doc.getText());
-			} else if (doc.getRelevanceValue() == 1) {
-			  queryData.get(doc.getQueryID()).setRelDocVector(docTFVector);
-			  queryData.get(doc.getQueryID()).setRelDocText(doc.getText());
+			if (doc.getRelevanceValue() == 99) {
+			  QueryData queryData = new QueryData();
+			  queryData.setQueryText(doc.getText());
+			  queryData.setQueryVector(docTFVector);
+			  queryData.setQid(doc.getQueryID());
+			  queries.put(doc.getQueryID(), queryData);
+			  
 			} else {
-			  queryData.get(doc.getQueryID()).setQueryVector(docTFVector);
+			  
+			  DocData docData = new DocData();
+			  docData.setDocText(doc.getText());
+			  docData.setDocVector(docTFVector);
+			  docData.setRel(doc.getRelevanceValue());
+			  
+	      QueryData queryObj = queries.get(doc.getQueryID());
+	      queryObj.addDoc(docData);
 			}
 		}
+	}
+	
+	public List<Entry<DocData, Double>> rankDocs(Map<String, Integer> docVector, List<DocData> docs) {
+	  
+	  Map<DocData, Double> similarities = new HashMap<DocData, Double>();
+	  
+	  for (DocData doc : docs) {
+	     Map<String, Integer> docTFVector = doc.getDocVector();
+	     similarities.put(doc, computeCosineSimilarity(docVector, docTFVector));
+	  }
+	  
+	  List<Entry<DocData, Double>> sortedEntries = new ArrayList<Entry<DocData,Double>>(similarities.entrySet());
+	  
+	  Collections.sort(sortedEntries, 
+	                   Collections.reverseOrder(
+	                           new Comparator<Entry<DocData, Double>>() {
 
+	                               @Override
+	                               public int compare(Entry<DocData, Double> arg0, Entry<DocData, Double> arg1) {
+        
+	                                 return arg0.getValue().compareTo(arg1.getValue());
+	                               }
+	    
+	                           }));
+	  
+	  return sortedEntries;
 	}
 
 	/**
@@ -105,45 +121,34 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 			throws ResourceProcessException, IOException {
 
 		super.collectionProcessComplete(arg0);
-
-		// TODO :: compute the cosine similarity measure
-		ArrayList<Integer> qids = new ArrayList<Integer>();
-		
-		for (Integer i : queryData.keySet()) {
-		  qids.add(i);
-		}
-		
-		Collections.sort(qids);
 		
 		DecimalFormat df = new DecimalFormat();
 		df.setMinimumFractionDigits(4);
 		df.setMaximumFractionDigits(4);
 		
 		double rrScore = 0.0;
-		
-		for (Integer qid : qids) {
-		  QueryData data = queryData.get(qid);
-		  
-		  Map<String, Integer> relDocVector = data.getRelDocVector();
-		  Map<String, Integer> irRelDocVector = data.getIRRelDocVector();
-		  Map<String, Integer> queryDocVector = data.getQueryVector();
-		  
-		  double relCosine = computeCosineSimilarity(queryDocVector, relDocVector);
-		  double irRelCosine = computeCosineSimilarity(queryDocVector, irRelDocVector);
-		  
-		  int relRank = relCosine < irRelCosine ? 2 : 1;
-		  int irRelRank = relRank == 1 ? 2 : 1;
-		  
-		  String relResult = formatOutput(df, relCosine, relRank, qid, 1, data.getRelDocText());
-		  String irRelResult = formatOutput(df, irRelCosine, irRelRank, qid, 0, data.getIrRelDocText());
-		  
-		  System.out.println(relResult);
-		  System.out.println(irRelResult);
-		  
-		  rrScore += (1.0 / relRank);
-		}
-		
-		System.out.println("MRR=" + rrScore / qids.size());
+    
+    for (Entry<Integer, QueryData> queryData : queries.entrySet()) {
+      QueryData query = queryData.getValue();
+      ArrayList<DocData> docs = query.getDocs();
+      Map<String, Integer> queryTFVector = query.getQueryVector();
+      
+      List<Entry<DocData, Double>> ranked = rankDocs(queryTFVector, docs);
+      
+      int i = 0;
+      for (Entry<DocData, Double> entry : ranked) {
+        i++;
+        DocData corpusDoc = entry.getKey();
+        double docSim = entry.getValue();
+        
+        if (corpusDoc.getRel() == 1) {
+          System.out.println(formatOutput(df, docSim, i, query.getQid(), corpusDoc.getRel(), corpusDoc.getDocText()));
+          rrScore += 1.0 / i;
+        }
+      }
+    }
+    System.out.println("MRR="+df.format(rrScore / (double) queries.size()));
+
 	}
 	
 	public String formatOutput(DecimalFormat df, double cosine, int rank, int qid, int rel, String text) {
