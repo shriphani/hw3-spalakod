@@ -9,8 +9,8 @@
     <delegateAnalysisEngine key="DocumentReader">
       <import location="DocumentReader.xml"/>
     </delegateAnalysisEngine>
-    <delegateAnalysisEngine key="RetrievalEvaluator">
-      <import location="RetrievalEvaluator.xml"/>
+    <delegateAnalysisEngine key="RetrievalEvaluatorImproved">
+      <import location="RetrievalEvaluatorImproved.xml"/>
     </delegateAnalysisEngine>
   </delegateAnalysisEngineSpecifiers>
   <analysisEngineMetaData>
@@ -24,7 +24,7 @@
       <fixedFlow>
         <node>DocumentReader</node>
         <node>DocumentVectorProcessedAnnotator</node>
-        <node>RetrievalEvaluator</node>
+        <node>RetrievalEvaluatorImproved</node>
       </fixedFlow>
     </flowConstraints>
     <fsIndexCollection/>
