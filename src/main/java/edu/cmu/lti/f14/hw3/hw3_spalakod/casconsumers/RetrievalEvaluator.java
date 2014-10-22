@@ -128,8 +128,17 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		
 		double rrScore = 0.0;
     
-    for (Entry<Integer, QueryData> queryData : queries.entrySet()) {
-      QueryData query = queryData.getValue();
+		Set<Integer> qidSet = queries.keySet();
+		ArrayList<Integer> qids = new ArrayList<Integer>();
+		for (int qid: qidSet) {
+		  qids.add(qid);
+		}
+		Collections.sort(qids);
+		// List<Integer> queryList = qids.subList(0, 5); - this is to match TA output
+		List<Integer> queryList = qids;
+		
+    for (Integer qid : queryList) {
+      QueryData query = queries.get(qid);
       ArrayList<DocData> docs = query.getDocs();
       Map<String, Integer> queryTFVector = query.getQueryVector();
       
@@ -147,7 +156,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
         }
       }
     }
-    System.out.println("MRR="+df.format(rrScore / (double) queries.size()));
+    System.out.println("MRR="+df.format(rrScore / (double) queryList.size()));
 
 	}
 	
