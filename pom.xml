@@ -4,7 +4,7 @@
 	<groupId>edu.cmu.lti.11791.f14.hw3
 </groupId>
 	<artifactId>hw3-spalakod</artifactId>
-	<version>0.0.3-SNAPSHOT</version>
+	<version>0.0.4</version>
 
 	<repositories>
 		<repository>
