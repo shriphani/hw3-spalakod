@@ -46,7 +46,7 @@ public class DocumentVectorAnnotator extends JCasAnnotator_ImplBase {
 	}
 
 	/**
-	 * 
+	 * Build a mapping from tokens to frequencies using the provided tokenizer
 	 * @param jcas
 	 * @param doc
 	 */
@@ -54,9 +54,6 @@ public class DocumentVectorAnnotator extends JCasAnnotator_ImplBase {
 	private void createTermFreqVector(JCas jcas, Document doc) {
 
 		String docText = doc.getText();
-		
-		//TO DO: construct a vector of tokens and update the tokenList in CAS
-    //TO DO: use tokenize0 from above 
 		
 		Map<String, Integer> tokenFreqMap = new HashMap<String, Integer>();
 		
