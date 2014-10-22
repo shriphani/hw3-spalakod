@@ -42,8 +42,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 	}
 
 	/**
-	 * TODO :: 1. construct the global word dictionary 2. keep the word
-	 * frequency for each sentence
+	 * Set up an in-memory representation of the data with some additional info (document vectors for example).
 	 */
 	@Override
 	public void processCas(CAS aCas) throws ResourceProcessException {
@@ -69,6 +68,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
       }
 			
 			if (doc.getRelevanceValue() == 99) {
+			  // build a new query object
 			  QueryData queryData = new QueryData();
 			  queryData.setQueryText(doc.getText());
 			  queryData.setQueryVector(docTFVector);
@@ -77,6 +77,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 			  
 			} else {
 			  
+			  // build a new document object and add it to the appropriate query
 			  DocData docData = new DocData();
 			  docData.setDocText(doc.getText());
 			  docData.setDocVector(docTFVector);
@@ -88,6 +89,13 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		}
 	}
 	
+	/**
+	 * Given a query and a list of documents, return a ranked list (descending order)
+	 * ranking the documents by similarity (this implementation uses cosine similarity)
+	 * @param docVector
+	 * @param docs
+	 * @return
+	 */
 	public List<Entry<DocData, Double>> rankDocs(Map<String, Integer> docVector, List<DocData> docs) {
 	  
 	  Map<DocData, Double> similarities = new HashMap<DocData, Double>();
@@ -115,8 +123,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 	}
 
 	/**
-	 * TODO 1. Compute Cosine Similarity and rank the retrieved sentences 2.
-	 * Compute the MRR metric
+	 * Go through the queries, rank all the docs and build the ranked list.
 	 */
 	@Override
 	public void collectionProcessComplete(ProcessTrace arg0)
@@ -138,7 +145,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		  qids.add(qid);
 		}
 		Collections.sort(qids);
-		// List<Integer> queryList = qids.subList(0, 5); - this is to match TA output
+		// List<Integer> queryList = qids.subList(0, 5); //- this is to match TA output
 		List<Integer> queryList = qids;
 		
     for (Integer qid : queryList) {
@@ -164,6 +171,16 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
     writer.close();
 	}
 	
+	/**
+	 * Returns a string in the desired format.
+	 * @param df
+	 * @param cosine
+	 * @param rank
+	 * @param qid
+	 * @param rel
+	 * @param text
+	 * @return
+	 */
 	public String formatOutput(DecimalFormat df, double cosine, int rank, int qid, int rel, String text) {
 	  String relResult = "";
     relResult += "cosine=" + df.format(cosine) + "\t";
@@ -191,6 +208,11 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		return dotProduct / vectorLength(queryVector) / vectorLength(docVector);
 	}
 
+	/**
+	 * compute magnitudes of document vectors
+	 * @param vector
+	 * @return
+	 */
 	private double vectorLength(Map<String, Integer> vector) {
 	  double result = 0.0;
 	  for (Map.Entry<String, Integer> entry : vector.entrySet()) {
