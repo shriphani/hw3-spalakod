@@ -1,6 +1,8 @@
 package edu.cmu.lti.f14.hw3.hw3_spalakod.casconsumers;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -121,6 +123,8 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 			throws ResourceProcessException, IOException {
 
 		super.collectionProcessComplete(arg0);
+
+		PrintWriter writer = new PrintWriter(new File("report.txt"));
 		
 		DecimalFormat df = new DecimalFormat();
 		df.setMinimumFractionDigits(4);
@@ -151,13 +155,13 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
         double docSim = entry.getValue();
         
         if (corpusDoc.getRel() == 1) {
-          System.out.println(formatOutput(df, docSim, i, query.getQid(), corpusDoc.getRel(), corpusDoc.getDocText()));
+          writer.println(formatOutput(df, docSim, i, query.getQid(), corpusDoc.getRel(), corpusDoc.getDocText()));
           rrScore += 1.0 / i;
         }
       }
     }
-    System.out.println("MRR="+df.format(rrScore / (double) queryList.size()));
-
+    writer.println("MRR="+df.format(rrScore / (double) queryList.size()));
+    writer.close();
 	}
 	
 	public String formatOutput(DecimalFormat df, double cosine, int rank, int qid, int rel, String text) {
